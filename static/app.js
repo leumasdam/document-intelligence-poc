@@ -54,6 +54,7 @@ const FIELD_LABELS = {
 const NUM_FIELDS = new Set(['subtotal', 'tax_rate', 'tax_amount', 'total', 'quantity', 'unit_price']);
 const SAVINGS_KEY = 'uniqa_doc_intel_savings_seconds';
 const SECONDS_PER_DOC = 8 * 60; // ~8 minutes saved per processed document
+const SECONDS_PER_CLASSIFICATION = 3 * 60; // ~3 minutes saved per case routed
 
 let state = {
   invoice: null,
@@ -156,9 +157,9 @@ function renderSavings(animate = false) {
     els.savingsPill.classList.add('bumped');
   }
 }
-function bumpSavings() {
+function bumpSavings(seconds = SECONDS_PER_DOC) {
   const current = loadSavings();
-  saveSavings(current + SECONDS_PER_DOC);
+  saveSavings(current + seconds);
   renderSavings(true);
 }
 
@@ -602,6 +603,169 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
   });
 });
 
+// ============================================================
+// Mode switching (Extract <-> Classify)
+// ============================================================
+function setMode(mode) {
+  const valid = mode === 'classify' ? 'classify' : 'extract';
+  document.body.classList.remove('mode-extract', 'mode-classify');
+  document.body.classList.add(`mode-${valid}`);
+  document.querySelectorAll('.mode-nav-link').forEach((link) => {
+    link.classList.toggle('active', link.dataset.mode === valid);
+  });
+}
+document.querySelectorAll('.mode-nav-link').forEach((link) => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const mode = link.dataset.mode;
+    history.replaceState(null, '', `#${mode}`);
+    setMode(mode);
+  });
+});
+window.addEventListener('hashchange', () => {
+  setMode(window.location.hash.replace('#', ''));
+});
+
+// ============================================================
+// Classification mode
+// ============================================================
+const classifyEls = {
+  input: document.getElementById('classify-input'),
+  charCount: document.getElementById('classify-char-count'),
+  classifyBtn: document.getElementById('classify-btn'),
+  clearBtn: document.getElementById('classify-clear'),
+  empty: document.getElementById('classify-empty'),
+  loading: document.getElementById('classify-loading'),
+  error: document.getElementById('classify-error'),
+  errorMessage: document.getElementById('classify-error-message'),
+  result: document.getElementById('classify-result'),
+  category: document.getElementById('classify-category'),
+  priority: document.getElementById('classify-priority'),
+  mode: document.getElementById('classify-mode'),
+  route: document.getElementById('classify-route'),
+  confidenceBar: document.getElementById('classify-confidence-bar'),
+  confidenceLabel: document.getElementById('classify-confidence-label'),
+  reason: document.getElementById('classify-reason'),
+  actions: document.getElementById('classify-actions'),
+  approveBtn: document.getElementById('classify-approve'),
+  rejectBtn: document.getElementById('classify-reject'),
+};
+
+const PRIORITY_LABELS = {
+  high: '🔴 High priority',
+  medium: '🟡 Medium priority',
+  low: '🟢 Low priority',
+};
+
+function showClassifyPane(name) {
+  ['empty', 'loading', 'error', 'result'].forEach((p) => {
+    classifyEls[p].classList.toggle('hidden', p !== name);
+  });
+}
+
+function updateCharCount() {
+  const n = (classifyEls.input.value || '').length;
+  classifyEls.charCount.textContent = `${n.toLocaleString()} chars`;
+}
+
+classifyEls.input.addEventListener('input', updateCharCount);
+
+classifyEls.clearBtn.addEventListener('click', () => {
+  classifyEls.input.value = '';
+  updateCharCount();
+  showClassifyPane('empty');
+  classifyEls.input.focus();
+});
+
+document.querySelectorAll('.case-btn').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const kind = btn.dataset.case;
+    try {
+      const resp = await fetch(`/sample-case/${kind}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      classifyEls.input.value = data.body;
+      updateCharCount();
+      classifyEls.input.focus();
+      classifyEls.input.scrollTop = 0;
+    } catch (err) {
+      classifyEls.errorMessage.textContent = `Could not load sample: ${err.message}`;
+      showClassifyPane('error');
+    }
+  });
+});
+
+classifyEls.classifyBtn.addEventListener('click', async () => {
+  const text = (classifyEls.input.value || '').trim();
+  if (!text) {
+    classifyEls.input.focus();
+    return;
+  }
+  showClassifyPane('loading');
+  try {
+    const resp = await fetch('/classify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const payload = await resp.json();
+    renderClassification(payload);
+    bumpSavings(SECONDS_PER_CLASSIFICATION);
+  } catch (err) {
+    classifyEls.errorMessage.textContent = err.message || String(err);
+    showClassifyPane('error');
+  }
+});
+
+function renderClassification(payload) {
+  const c = payload.classification;
+  classifyEls.category.textContent = c.category_label;
+  classifyEls.priority.textContent = PRIORITY_LABELS[c.priority] || c.priority;
+  classifyEls.priority.className = `rounded-md px-2.5 py-1 text-xs font-semibold priority-${c.priority}`;
+  classifyEls.route.textContent = c.route_to;
+  const pct = Math.round((c.confidence || 0) * 100);
+  classifyEls.confidenceBar.style.width = `${pct}%`;
+  classifyEls.confidenceLabel.textContent = `${pct}%`;
+  classifyEls.reason.textContent = c.reason || '—';
+  classifyEls.actions.innerHTML = '';
+  for (const action of c.suggested_actions || []) {
+    const li = document.createElement('li');
+    li.className = 'flex items-start gap-2';
+    li.innerHTML = `<span class="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-uniqa-blue"></span><span>${escapeHtml(action)}</span>`;
+    classifyEls.actions.appendChild(li);
+  }
+  classifyEls.mode.textContent = payload.mode === 'llm' ? `${payload.model || 'Claude'}` : 'heuristic';
+  showClassifyPane('result');
+  refreshIcons();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+classifyEls.approveBtn.addEventListener('click', () => {
+  const original = classifyEls.approveBtn.innerHTML;
+  classifyEls.approveBtn.innerHTML = '<i data-lucide="check-circle" class="h-3.5 w-3.5"></i> Routed';
+  classifyEls.approveBtn.classList.add('bg-emerald-600');
+  refreshIcons();
+  setTimeout(() => {
+    classifyEls.approveBtn.innerHTML = original;
+    classifyEls.approveBtn.classList.remove('bg-emerald-600');
+    refreshIcons();
+  }, 2000);
+});
+
+classifyEls.rejectBtn.addEventListener('click', () => {
+  showClassifyPane('empty');
+});
+
 // Init
+const initialMode = window.location.hash.replace('#', '') || 'extract';
+setMode(initialMode);
 renderSavings(false);
 refreshIcons();
+updateCharCount();

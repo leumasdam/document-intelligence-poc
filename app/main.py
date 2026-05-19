@@ -5,8 +5,10 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .classifier import classify
 from .extractor import extract_invoice
-from .schemas import ExtractionResponse
+from .samples import SAMPLE_CASES
+from .schemas import ClassificationRequest, ClassificationResponse, ExtractionResponse
 
 load_dotenv()
 
@@ -27,6 +29,29 @@ async def sample(kind: str = "claim"):
     if path is None or not path.exists():
         raise HTTPException(status_code=404, detail=f"Sample '{kind}' not found.")
     return FileResponse(path, media_type="application/pdf", filename=path.name)
+
+
+@app.get("/sample-case")
+async def list_sample_cases():
+    return {kind: {"title": data["title"]} for kind, data in SAMPLE_CASES.items()}
+
+
+@app.get("/sample-case/{kind}")
+async def get_sample_case(kind: str):
+    if kind not in SAMPLE_CASES:
+        raise HTTPException(status_code=404, detail=f"Sample case '{kind}' not found.")
+    return SAMPLE_CASES[kind]
+
+
+@app.post("/classify", response_model=ClassificationResponse)
+async def classify_case(payload: ClassificationRequest):
+    text = (payload.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message text is required.")
+    if len(text) > 20000:
+        raise HTTPException(status_code=413, detail="Message too long (max 20,000 chars).")
+    classification, mode, model = classify(text)
+    return ClassificationResponse(classification=classification, mode=mode, model=model)
 
 
 @app.post("/extract", response_model=ExtractionResponse)

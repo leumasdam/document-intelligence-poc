@@ -1,27 +1,44 @@
 # UNIQA · Document Intelligence (concept)
 
-A portfolio case-study for AI-assisted document processing in an insurance back office.
-Drop a PDF claim form or invoice — the AI extracts a structured JSON, highlights low-confidence
-fields for review, and lets the adjuster click any field to verify its source on the original PDF.
+A portfolio case-study for AI-assisted back-office automation in insurance. Two
+tools under one workspace, switched via the header nav:
+
+1. **Extract** — drop a PDF claim form or invoice, get structured JSON with
+   click-to-highlight verification on the source PDF
+2. **Classify** — paste an incoming email / message, get category, priority,
+   routing team, confidence score and suggested adjuster actions
 
 > Concept demo, not affiliated with or endorsed by UNIQA Insurance Group. Branding is used
 > illustratively for portfolio purposes.
 
 ## What it does
 
+### Extract mode (PDF → structured JSON)
 - **Input:** PDF claim form, invoice, or supporting document
-- **Output:** structured JSON (claim/document number, policy number, dates, parties,
-  line items, totals) plus a `missing_fields` list flagging anything the model could not
-  confidently extract
-- **UI:** drag-drop upload, **side-by-side PDF preview**, **click-to-highlight** —
+- **Output:** structured JSON (claim/document number, policy number, dates,
+  parties, line items, totals) plus a `missing_fields` list flagging anything
+  the model could not confidently extract
+- **UI:** drag-drop upload, side-by-side PDF preview, **click-to-highlight** —
   every field shows where it came from on the source PDF
-- **Time-saved counter** in the header accumulates across uploads so reviewers see the
-  cumulative impact of the tool
 - **Two sample documents** ship in the box: a Slovak car-insurance claim form
-  (`sample-data/claim-form.pdf`) and a generic invoice (`sample-data/invoice.pdf`)
+  and a generic invoice
 
-The form deliberately treats AI output as a *proposal*, not a decision: missing or
-low-confidence fields are highlighted in amber for the adjuster's review.
+### Classify mode (text → category + team + priority)
+- **Input:** plain text (email body, claim description, complaint, question)
+- **Output:** category (vehicle damage / property / health / payment /
+  complaint / policy change / …), priority (high / medium / low), routing
+  team, confidence score, reasoning, suggested adjuster actions
+- **Four sample cases** built in: car accident, payment complaint, address
+  change, policy question
+- **High-priority signals** include legal threats (NBS / ŠOI / lawyer mentions)
+  and active emergencies — surfaces red badge for immediate triage
+
+### Shared
+- **Time-saved counter** in the header accumulates across both tools
+  (~8 min per extraction, ~3 min per classification) — persists across sessions
+  via localStorage
+- Forms deliberately treat AI output as a *proposal*, not a decision: missing
+  or low-confidence fields are highlighted in amber for the adjuster's review
 
 ## Architecture
 
@@ -74,13 +91,15 @@ container host.
 ```
 app/
   main.py        FastAPI app, routes, static serving
-  extractor.py   Orchestration: PDF -> LLM (or heuristic)
-  pdf_reader.py  pdfplumber wrapper, returns text + per-word bounding boxes
-  llm.py         Claude client, JSON schema, heuristic fallback, doc-type detection
-  schemas.py     Pydantic models (Invoice, LineItem, WordBox, ...)
+  extractor.py   Extract orchestration: PDF -> LLM (or heuristic)
+  pdf_reader.py  pdfplumber wrapper, text + per-word bounding boxes
+  llm.py         Claude client, JSON schema, heuristic fallback for extraction
+  classifier.py  Classify orchestration: text -> LLM (or heuristic)
+  samples.py     Built-in sample customer messages
+  schemas.py     Pydantic models (Invoice, Classification, WordBox, ...)
 static/
-  index.html     UI shell, Tailwind via CDN, lucide icons, PDF.js loader
-  app.js         Upload, render, PDF preview, click-to-highlight, time counter
+  index.html     UI shell with mode nav (Extract / Classify)
+  app.js         Both tools' frontend logic + PDF.js + mode switching
   style.css      Custom styling
 sample-data/
   invoice.pdf      Generic invoice

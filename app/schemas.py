@@ -62,3 +62,24 @@ class ExtractionResponse(BaseModel):
     pdf_base64: Optional[str] = None
     word_boxes: list[WordBox] = []
     pages: list[PageSize] = []
+
+
+class Classification(BaseModel):
+    category: str
+    category_label: str
+    priority: Literal["high", "medium", "low"]
+    route_to: str
+    confidence: float
+    reason: str
+    suggested_actions: list[str] = []
+    detected_language: Optional[str] = None
+
+
+class ClassificationResponse(BaseModel):
+    classification: Classification
+    mode: str
+    model: Optional[str] = None
+
+
+class ClassificationRequest(BaseModel):
+    text: str

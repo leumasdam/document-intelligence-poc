@@ -58,6 +58,23 @@ pre, code {
 body[data-doc-type="invoice"] .claim-only { display: none; }
 body[data-doc-type="claim_form"] .invoice-only { display: none; }
 
+/* Mode switching: header nav toggles which top-level section is visible */
+body.mode-extract .mode-classify-only { display: none; }
+body.mode-classify .mode-extract-only { display: none; }
+
+.mode-nav-link.active {
+  background: var(--uniqa-navy);
+  color: white;
+}
+.mode-nav-link.active:hover {
+  background: var(--uniqa-navy-dark);
+}
+
+/* Priority badges */
+.priority-high { background: #FEE2E2; color: #991B1B; }
+.priority-medium { background: #FEF3C7; color: #92400E; }
+.priority-low { background: #D1FAE5; color: #065F46; }
+
 .tab-btn {
   cursor: pointer;
   background: transparent;
