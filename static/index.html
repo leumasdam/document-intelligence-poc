@@ -205,6 +205,20 @@
           </div>
         </section>
 
+        <!-- Routed success banner (Extract mode) -->
+        <section id="extract-routed" class="hidden mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 overflow-hidden">
+          <div class="border-b border-emerald-100 bg-emerald-100/50 px-5 py-3 flex items-center gap-2">
+            <i data-lucide="check-circle-2" class="h-5 w-5 text-emerald-600"></i>
+            <span class="text-sm font-semibold text-emerald-900">Document routed</span>
+            <span id="extract-real-badge" class="hidden ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">live webhook</span>
+            <span id="extract-mock-badge" class="hidden ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">mock</span>
+            <button id="extract-routed-dismiss" class="text-emerald-700 hover:text-emerald-900">
+              <i data-lucide="x" class="h-4 w-4"></i>
+            </button>
+          </div>
+          <ul id="extract-routed-steps" class="divide-y divide-emerald-100 text-sm text-slate-700"></ul>
+        </section>
+
         <!-- Results -->
         <section id="results-section" class="hidden space-y-6">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -222,8 +236,12 @@
                 <i data-lucide="clipboard" class="h-4 w-4"></i>
                 <span>Copy JSON</span>
               </button>
-              <button id="download-json-btn" class="inline-flex items-center gap-2 rounded-md bg-uniqa-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-uniqa-navy-dark">
+              <button id="download-json-btn" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                 <i data-lucide="download" class="h-4 w-4"></i>
+                JSON
+              </button>
+              <button id="save-export-btn" class="inline-flex items-center gap-2 rounded-md bg-uniqa-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-uniqa-navy-dark">
+                <i data-lucide="send" class="h-4 w-4"></i>
                 Save &amp; export
               </button>
             </div>
@@ -503,6 +521,23 @@
               <div id="classify-error" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
                 <p class="text-sm font-semibold text-red-800">Classification failed</p>
                 <p id="classify-error-message" class="mt-1 text-xs text-red-700"></p>
+              </div>
+
+              <!-- Routed/success card -->
+              <div id="classify-routed" class="hidden rounded-2xl border border-emerald-200 bg-emerald-50 overflow-hidden">
+                <div class="border-b border-emerald-100 bg-emerald-100/50 px-5 py-3 flex items-center gap-2">
+                  <i data-lucide="check-circle-2" class="h-5 w-5 text-emerald-600"></i>
+                  <span class="text-sm font-semibold text-emerald-900">Case routed</span>
+                  <span id="routed-real-badge" class="hidden ml-auto rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">live webhook</span>
+                  <span id="routed-mock-badge" class="hidden ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">mock</span>
+                </div>
+                <ul id="routed-steps" class="divide-y divide-emerald-100 text-sm text-slate-700"></ul>
+                <div class="bg-white p-4 flex justify-end">
+                  <button id="routed-reset" class="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                    <i data-lucide="rotate-ccw" class="h-3.5 w-3.5"></i>
+                    Start new case
+                  </button>
+                </div>
               </div>
 
               <!-- Result card -->

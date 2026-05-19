@@ -83,3 +83,19 @@ class ClassificationResponse(BaseModel):
 
 class ClassificationRequest(BaseModel):
     text: str
+
+
+class IntegrationRequest(BaseModel):
+    kind: Literal["extraction", "classification"]
+    payload: dict
+
+
+class IntegrationResult(BaseModel):
+    case_id: str
+    recipient_email: str
+    audited_by: str
+    timestamp: str
+    webhook_status: Literal["delivered", "failed", "not_configured"]
+    webhook_url: Optional[str] = None
+    webhook_http_status: Optional[int] = None
+    webhook_error: Optional[str] = None

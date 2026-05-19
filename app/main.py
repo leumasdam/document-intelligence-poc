@@ -7,8 +7,15 @@ from fastapi.staticfiles import StaticFiles
 
 from .classifier import classify
 from .extractor import extract_invoice
+from .integration import deliver
 from .samples import SAMPLE_CASES
-from .schemas import ClassificationRequest, ClassificationResponse, ExtractionResponse
+from .schemas import (
+    ClassificationRequest,
+    ClassificationResponse,
+    ExtractionResponse,
+    IntegrationRequest,
+    IntegrationResult,
+)
 
 load_dotenv()
 
@@ -52,6 +59,14 @@ async def classify_case(payload: ClassificationRequest):
         raise HTTPException(status_code=413, detail="Message too long (max 20,000 chars).")
     classification, mode, model = classify(text)
     return ClassificationResponse(classification=classification, mode=mode, model=model)
+
+
+@app.post("/integrate", response_model=IntegrationResult)
+async def integrate(req: IntegrationRequest):
+    if not req.payload:
+        raise HTTPException(status_code=400, detail="Payload is required.")
+    result = await deliver(req.payload, req.kind)
+    return IntegrationResult(**result)
 
 
 @app.post("/extract", response_model=ExtractionResponse)

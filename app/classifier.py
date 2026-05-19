@@ -243,10 +243,15 @@ def classify_heuristic(text: str) -> Classification:
     # Strong, low-ambiguity phrases first — these beat generic single-word matches
     # like "auto" / "PZP" which appear in many contexts.
     strong_phrases = [
-        ("document_update", ["zmena adresy", "novu adresu", "novy email", "address change", "email update"]),
+        ("document_update", [
+            "zmena adresy", "zmenu adresy", "zmenu trvalej adresy", "zmena trvalej adresy",
+            "novu adresu", "novej adresy", "na novu adresu",
+            "novy email", "novy telefon", "aktualizaciu kontakt",
+            "address change", "email update", "change my address", "moving to",
+        ]),
         ("complaint", ["staznost", "nespokojn", "narodna banka", "obchodna inspekcia", "soi", "nbs", "complaint"]),
-        ("cancellation", ["zrusit zmluvu", "vypoved zmluvy", "ukoncit poistku", "cancel my policy", "terminate"]),
-        ("policy_question", ["uvazujem o", "zaujimalo by ma", "ma zaujima", "informaciu", "wondering if", "could you tell"]),
+        ("cancellation", ["zrusit zmluvu", "zrusenie zmluvy", "vypoved zmluvy", "ukoncit poistku", "ukoncenie poistky", "cancel my policy", "terminate"]),
+        ("policy_question", ["uvazujem o", "zaujimalo by ma", "ma zaujima", "rad by som vedel", "wondering if", "could you tell", "is it possible"]),
     ]
     for cat, phrases in strong_phrases:
         for phrase in phrases:

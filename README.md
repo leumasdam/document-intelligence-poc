@@ -39,6 +39,10 @@ tools under one workspace, switched via the header nav:
   via localStorage
 - Forms deliberately treat AI output as a *proposal*, not a decision: missing
   or low-confidence fields are highlighted in amber for the adjuster's review
+- **Mock or real downstream integration** — clicking "Approve & route" /
+  "Save & export" generates a fake case ID and routes to a team mailbox by
+  default. If `INTEGRATION_WEBHOOK_URL` is set, the same action also POSTs the
+  payload to that URL (e.g. webhook.site for live demonstration)
 
 ## Architecture
 
@@ -80,11 +84,33 @@ The repo includes a `Dockerfile` and a `render.yaml` blueprint. Easiest path:
 2. On <https://render.com>, **New > Blueprint** and point at the repo.
 3. Render auto-detects `render.yaml`. Add `ANTHROPIC_API_KEY` as a secret env var
    when prompted (or leave empty to deploy in heuristic mode).
-4. First deploy takes ~3 minutes. Free tier sleeps after 15 min idle and cold-starts
+4. (Optional) For the **real webhook integration**, also add
+   `INTEGRATION_WEBHOOK_URL` — see the next section.
+5. First deploy takes ~3 minutes. Free tier sleeps after 15 min idle and cold-starts
    in ~30s — fine for a portfolio demo.
 
 The same Docker image runs on **Fly.io**, **Railway**, **Google Cloud Run**, or any
 container host.
+
+## Demonstrating the real webhook integration
+
+For interviews, it's powerful to show that the tool actually pushes data
+somewhere — not just generates JSON on screen. Set this up once:
+
+1. Open <https://webhook.site> in a new tab. It gives you a unique URL (copied
+   to your clipboard automatically). Free, no signup needed.
+2. In Render dashboard → your service → **Environment**, add
+   `INTEGRATION_WEBHOOK_URL` with that webhook.site URL as the value. Save.
+3. Render redeploys automatically (~30s).
+4. In the demo, open both the app and the webhook.site tab side by side.
+   Click **Approve & route** (Classify) or **Save & export** (Extract) — the
+   payload appears in webhook.site in real time, the result card in the app
+   shows a green "live webhook" badge, and the HTTP status code.
+
+When the env var is not set, both buttons still work — they just show a
+"mock" badge instead of "live webhook" and skip the actual HTTP POST. This
+keeps the demo functional without any setup, while the env var unlocks the
+production-style integration view.
 
 ## Project layout
 

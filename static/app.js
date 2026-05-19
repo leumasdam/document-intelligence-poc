@@ -21,6 +21,12 @@ const els = {
   resetBtn: document.getElementById('reset-btn'),
   copyJsonBtn: document.getElementById('copy-json-btn'),
   downloadJsonBtn: document.getElementById('download-json-btn'),
+  saveExportBtn: document.getElementById('save-export-btn'),
+  extractRouted: document.getElementById('extract-routed'),
+  extractRoutedSteps: document.getElementById('extract-routed-steps'),
+  extractRealBadge: document.getElementById('extract-real-badge'),
+  extractMockBadge: document.getElementById('extract-mock-badge'),
+  extractRoutedDismiss: document.getElementById('extract-routed-dismiss'),
   missingBanner: document.getElementById('missing-banner'),
   missingList: document.getElementById('missing-list'),
   lineItemsBody: document.getElementById('line-items-body'),
@@ -560,6 +566,107 @@ els.downloadJsonBtn.addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
+// ============================================================
+// Integration: POST current state to /integrate (mock or real webhook)
+// ============================================================
+async function callIntegrate(kind, payload) {
+  const resp = await fetch('/integrate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, payload }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+    throw new Error(err.detail || `HTTP ${resp.status}`);
+  }
+  return resp.json();
+}
+
+function renderRoutedSteps(target, result, mockBadge, realBadge) {
+  const isReal = result.webhook_status === 'delivered';
+  const isFailed = result.webhook_status === 'failed';
+  mockBadge.classList.toggle('hidden', !!result.webhook_url);
+  realBadge.classList.toggle('hidden', !isReal);
+
+  const steps = [
+    {
+      icon: 'check',
+      text: `Case <strong>${escapeHtml(result.case_id)}</strong> created in claims system`,
+      muted: !isReal,
+    },
+    {
+      icon: 'mail',
+      text: `Notification queued to <strong>${escapeHtml(result.recipient_email)}</strong>`,
+      muted: !isReal,
+    },
+    {
+      icon: 'shield-check',
+      text: `Audit logged at <strong>${escapeHtml(result.timestamp)}</strong> by ${escapeHtml(result.audited_by)}`,
+      muted: !isReal,
+    },
+  ];
+
+  if (result.webhook_url) {
+    if (isReal) {
+      steps.push({
+        icon: 'zap',
+        text: `Live webhook delivered to <strong>${escapeHtml(result.webhook_url)}</strong> (HTTP ${result.webhook_http_status || '200'})`,
+        muted: false,
+      });
+    } else if (isFailed) {
+      steps.push({
+        icon: 'alert-triangle',
+        text: `Webhook delivery failed: ${escapeHtml(result.webhook_error || 'unknown error')}`,
+        muted: false,
+        error: true,
+      });
+    }
+  } else {
+    steps.push({
+      icon: 'info',
+      text: `Mock mode — set <code class="rounded bg-slate-100 px-1 py-0.5 text-xs">INTEGRATION_WEBHOOK_URL</code> in Render to push payloads to a real endpoint (e.g. webhook.site).`,
+      muted: false,
+      info: true,
+    });
+  }
+
+  target.innerHTML = '';
+  for (const step of steps) {
+    const li = document.createElement('li');
+    li.className = `flex items-start gap-3 px-5 py-3 ${step.error ? 'bg-red-50 text-red-800' : step.info ? 'bg-slate-50 text-slate-600' : ''}`;
+    li.innerHTML = `
+      <i data-lucide="${step.icon}" class="mt-0.5 h-4 w-4 flex-shrink-0 ${step.error ? 'text-red-600' : step.info ? 'text-slate-400' : 'text-emerald-600'}"></i>
+      <span class="${step.muted ? 'text-slate-500' : ''}">${step.text}</span>
+    `;
+    target.appendChild(li);
+  }
+  refreshIcons();
+}
+
+els.saveExportBtn.addEventListener('click', async () => {
+  if (!state.invoice) return;
+  els.saveExportBtn.disabled = true;
+  const original = els.saveExportBtn.innerHTML;
+  els.saveExportBtn.innerHTML = '<i data-lucide="loader-2" class="h-4 w-4 animate-spin"></i> Sending…';
+  refreshIcons();
+  try {
+    const result = await callIntegrate('extraction', state.invoice);
+    renderRoutedSteps(els.extractRoutedSteps, result, els.extractMockBadge, els.extractRealBadge);
+    els.extractRouted.classList.remove('hidden');
+    els.extractRouted.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    alert(`Routing failed: ${err.message}`);
+  } finally {
+    els.saveExportBtn.innerHTML = original;
+    els.saveExportBtn.disabled = false;
+    refreshIcons();
+  }
+});
+
+els.extractRoutedDismiss.addEventListener('click', () => {
+  els.extractRouted.classList.add('hidden');
+});
+
 // PDF pagination
 els.pdfPrev.addEventListener('click', async () => {
   if (pdfState.pageNum > 1) {
@@ -639,6 +746,11 @@ const classifyEls = {
   error: document.getElementById('classify-error'),
   errorMessage: document.getElementById('classify-error-message'),
   result: document.getElementById('classify-result'),
+  routed: document.getElementById('classify-routed'),
+  routedSteps: document.getElementById('routed-steps'),
+  routedRealBadge: document.getElementById('routed-real-badge'),
+  routedMockBadge: document.getElementById('routed-mock-badge'),
+  routedReset: document.getElementById('routed-reset'),
   category: document.getElementById('classify-category'),
   priority: document.getElementById('classify-priority'),
   mode: document.getElementById('classify-mode'),
@@ -651,6 +763,8 @@ const classifyEls = {
   rejectBtn: document.getElementById('classify-reject'),
 };
 
+const classifyState = { lastClassification: null };
+
 const PRIORITY_LABELS = {
   high: '🔴 High priority',
   medium: '🟡 Medium priority',
@@ -658,7 +772,7 @@ const PRIORITY_LABELS = {
 };
 
 function showClassifyPane(name) {
-  ['empty', 'loading', 'error', 'result'].forEach((p) => {
+  ['empty', 'loading', 'error', 'result', 'routed'].forEach((p) => {
     classifyEls[p].classList.toggle('hidden', p !== name);
   });
 }
@@ -723,6 +837,7 @@ classifyEls.classifyBtn.addEventListener('click', async () => {
 
 function renderClassification(payload) {
   const c = payload.classification;
+  classifyState.lastClassification = c;
   classifyEls.category.textContent = c.category_label;
   classifyEls.priority.textContent = PRIORITY_LABELS[c.priority] || c.priority;
   classifyEls.priority.className = `rounded-md px-2.5 py-1 text-xs font-semibold priority-${c.priority}`;
@@ -747,19 +862,35 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-classifyEls.approveBtn.addEventListener('click', () => {
+classifyEls.approveBtn.addEventListener('click', async () => {
+  const lastClassification = classifyState.lastClassification;
+  if (!lastClassification) return;
+  classifyEls.approveBtn.disabled = true;
   const original = classifyEls.approveBtn.innerHTML;
-  classifyEls.approveBtn.innerHTML = '<i data-lucide="check-circle" class="h-3.5 w-3.5"></i> Routed';
-  classifyEls.approveBtn.classList.add('bg-emerald-600');
+  classifyEls.approveBtn.innerHTML = '<i data-lucide="loader-2" class="h-3.5 w-3.5 animate-spin"></i> Routing…';
   refreshIcons();
-  setTimeout(() => {
+  try {
+    const result = await callIntegrate('classification', lastClassification);
+    renderRoutedSteps(classifyEls.routedSteps, result, classifyEls.routedMockBadge, classifyEls.routedRealBadge);
+    classifyEls.result.classList.add('hidden');
+    classifyEls.routed.classList.remove('hidden');
+  } catch (err) {
+    alert(`Routing failed: ${err.message}`);
+  } finally {
     classifyEls.approveBtn.innerHTML = original;
-    classifyEls.approveBtn.classList.remove('bg-emerald-600');
+    classifyEls.approveBtn.disabled = false;
     refreshIcons();
-  }, 2000);
+  }
 });
 
 classifyEls.rejectBtn.addEventListener('click', () => {
+  showClassifyPane('empty');
+});
+
+classifyEls.routedReset.addEventListener('click', () => {
+  classifyEls.input.value = '';
+  updateCharCount();
+  classifyEls.routed.classList.add('hidden');
   showClassifyPane('empty');
 });
 
