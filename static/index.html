@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UNIQA · Document Intelligence (concept)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              uniqa: {
+                navy: '#002F5F',
+                'navy-dark': '#001E50',
+                blue: '#0050C8',
+                'blue-light': '#3380E0',
+                'blue-50': '#EBF2FB',
+                'blue-100': '#D6E4F7',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <div class="min-h-screen">
+      <!-- UNIQA top bar -->
+      <div class="bg-uniqa-navy text-white">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-2 text-xs">
+          <div class="flex items-center gap-4">
+            <span class="opacity-80">Internal tool</span>
+            <span class="opacity-40">·</span>
+            <span class="opacity-80">Claims &amp; Underwriting</span>
+          </div>
+          <div class="flex items-center gap-3 opacity-80">
+            <span>SK</span>
+            <span class="opacity-40">|</span>
+            <span>EN</span>
+            <span class="opacity-40">|</span>
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="user" class="h-3 w-3"></i>
+              demo.user@uniqa.sk
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main header -->
+      <header class="border-b border-slate-200/80 bg-white">
+        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center">
+              <div class="flex h-10 w-10 items-center justify-center rounded-md bg-uniqa-navy text-white">
+                <span class="text-lg font-bold tracking-tight">U</span>
+              </div>
+              <span class="ml-2.5 text-xl font-bold tracking-tight text-uniqa-navy">UNIQA</span>
+            </div>
+            <div class="ml-3 border-l border-slate-200 pl-4">
+              <h1 class="text-base font-semibold tracking-tight text-slate-900">Document Intelligence</h1>
+              <p class="text-xs text-slate-500">PDF claim documents → structured data · adjuster review</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <!-- Time saved counter -->
+            <div
+              id="savings-pill"
+              class="hidden md:flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs"
+              title="Manual entry of a typical claim takes ~8 minutes. Each AI-assisted extraction takes seconds. This counter tracks cumulative time saved across uploads."
+            >
+              <i data-lucide="timer" class="h-3.5 w-3.5 text-emerald-600"></i>
+              <div class="flex flex-col leading-tight">
+                <span class="text-[10px] uppercase tracking-wider text-emerald-700/70">Time saved</span>
+                <span id="savings-value" class="font-semibold text-emerald-900">0 min</span>
+              </div>
+            </div>
+            <span
+              id="mode-badge"
+              class="hidden items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+            >
+              <span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+              <span id="mode-label">idle</span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto max-w-7xl px-6 py-8">
+        <!-- Upload zone -->
+        <section id="upload-section" class="mb-8">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold tracking-tight text-slate-900">New document</h2>
+            <p class="text-sm text-slate-500">Upload an incoming claim form, invoice, or supporting document. Extracted fields are reviewed before saving.</p>
+          </div>
+
+          <div
+            id="dropzone"
+            class="group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-16 text-center transition hover:border-uniqa-blue hover:bg-uniqa-blue-50"
+          >
+            <input id="file-input" type="file" accept="application/pdf,.pdf" class="hidden" />
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-uniqa-blue-50 text-uniqa-blue transition group-hover:bg-uniqa-blue group-hover:text-white">
+              <i data-lucide="file-up" class="h-7 w-7"></i>
+            </div>
+            <h3 class="mt-5 text-lg font-semibold text-slate-900">Drop a PDF document here</h3>
+            <p class="mt-1 text-sm text-slate-500">
+              or click anywhere in this box to browse · max ~10MB · single page works best
+            </p>
+            <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+              <button
+                type="button"
+                data-sample="claim"
+                class="sample-btn inline-flex items-center gap-2 rounded-md bg-uniqa-navy px-4 py-2 text-sm font-medium text-white transition hover:bg-uniqa-navy-dark"
+              >
+                <i data-lucide="file-warning" class="h-4 w-4"></i>
+                Sample claim form
+              </button>
+              <button
+                type="button"
+                data-sample="invoice"
+                class="sample-btn inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                <i data-lucide="receipt" class="h-4 w-4"></i>
+                Sample invoice
+              </button>
+            </div>
+          </div>
+
+          <!-- Trust strip -->
+          <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
+              <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-uniqa-blue-50 text-uniqa-blue">
+                <i data-lucide="shield-check" class="h-4 w-4"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-slate-900">Human-in-the-loop</p>
+                <p class="text-xs text-slate-500">AI extracts, adjuster confirms.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
+              <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-uniqa-blue-50 text-uniqa-blue">
+                <i data-lucide="mouse-pointer-click" class="h-4 w-4"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-slate-900">Click to verify</p>
+                <p class="text-xs text-slate-500">Each field highlights its source on the PDF.</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-3">
+              <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-uniqa-blue-50 text-uniqa-blue">
+                <i data-lucide="download" class="h-4 w-4"></i>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-slate-900">Exportable JSON</p>
+                <p class="text-xs text-slate-500">Ready for downstream systems.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Loading state -->
+        <section id="loading-section" class="hidden">
+          <div class="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-16">
+            <div class="loader"></div>
+            <p class="mt-6 text-sm font-medium text-slate-700">Extracting structured data…</p>
+            <p class="mt-1 text-xs text-slate-500" id="loading-step">Parsing PDF</p>
+          </div>
+        </section>
+
+        <!-- Error state -->
+        <section id="error-section" class="hidden">
+          <div class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+            <i data-lucide="alert-circle" class="mt-0.5 h-5 w-5 flex-shrink-0"></i>
+            <div class="flex-1">
+              <p class="font-semibold">Extraction failed</p>
+              <p id="error-message" class="mt-1 text-red-700"></p>
+            </div>
+            <button id="error-dismiss" class="text-red-400 hover:text-red-600">
+              <i data-lucide="x" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </section>
+
+        <!-- Results -->
+        <section id="results-section" class="hidden space-y-6">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <h2 class="text-xl font-semibold tracking-tight text-slate-900">Extracted document</h2>
+              <span id="doc-type-badge" class="hidden rounded-md bg-uniqa-blue-50 px-2 py-0.5 text-xs font-medium text-uniqa-blue"></span>
+              <span id="file-name" class="rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="reset-btn" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                New document
+              </button>
+              <button id="copy-json-btn" class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                <i data-lucide="clipboard" class="h-4 w-4"></i>
+                <span>Copy JSON</span>
+              </button>
+              <button id="download-json-btn" class="inline-flex items-center gap-2 rounded-md bg-uniqa-navy px-3 py-1.5 text-sm font-medium text-white transition hover:bg-uniqa-navy-dark">
+                <i data-lucide="download" class="h-4 w-4"></i>
+                Save &amp; export
+              </button>
+            </div>
+          </div>
+
+          <!-- Split view: PDF preview + form/json/raw -->
+          <div class="grid gap-6 lg:grid-cols-12">
+            <!-- PDF preview pane -->
+            <aside class="lg:col-span-5 lg:sticky lg:top-4 self-start">
+              <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                <div class="mb-2 flex items-center justify-between px-2 pt-1">
+                  <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Source document</h3>
+                  <div class="flex items-center gap-1">
+                    <button id="pdf-prev" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40" disabled>
+                      <i data-lucide="chevron-left" class="h-4 w-4"></i>
+                    </button>
+                    <span id="pdf-page-label" class="text-xs text-slate-500 tabular-nums">1 / 1</span>
+                    <button id="pdf-next" class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40" disabled>
+                      <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="pdf-container" class="relative overflow-hidden rounded-lg bg-slate-100">
+                  <canvas id="pdf-canvas" class="block w-full"></canvas>
+                  <canvas id="pdf-highlight" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
+                </div>
+                <p class="mt-2 px-2 text-[11px] text-slate-400">
+                  <i data-lucide="info" class="inline h-3 w-3 align-middle"></i>
+                  Click any field on the right to highlight its source on the PDF.
+                </p>
+              </div>
+            </aside>
+
+            <!-- Right pane: tabs -->
+            <div class="lg:col-span-7 space-y-4">
+              <!-- Tabs -->
+              <div class="border-b border-slate-200">
+                <div class="flex gap-6">
+                  <button data-tab="form" class="tab-btn -mb-px border-b-2 border-uniqa-blue px-1 py-2 text-sm font-medium text-uniqa-navy">Form view</button>
+                  <button data-tab="json" class="tab-btn -mb-px border-b-2 border-transparent px-1 py-2 text-sm font-medium text-slate-500 hover:text-slate-900">JSON</button>
+                  <button data-tab="raw" class="tab-btn -mb-px border-b-2 border-transparent px-1 py-2 text-sm font-medium text-slate-500 hover:text-slate-900">Raw text</button>
+                </div>
+              </div>
+
+              <!-- Form view -->
+              <div id="tab-form" class="tab-panel space-y-5">
+                <div id="missing-banner" class="hidden flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <i data-lucide="alert-triangle" class="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600"></i>
+                  <div>
+                    <p class="font-semibold">Review needed before saving</p>
+                    <p id="missing-list" class="mt-0.5 text-amber-800"></p>
+                  </div>
+                </div>
+
+                <!-- Document details -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="hash" class="h-4 w-4 text-uniqa-blue"></i>
+                    Document details
+                  </h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="field" data-field="invoice_number">
+                      <label>Document / claim number</label>
+                      <input type="text" data-bind="invoice_number" />
+                    </div>
+                    <div class="field claim-only" data-field="policy_number">
+                      <label>Policy number</label>
+                      <input type="text" data-bind="policy_number" />
+                    </div>
+                    <div class="field claim-only" data-field="incident_date">
+                      <label>Incident date</label>
+                      <input type="text" data-bind="incident_date" placeholder="YYYY-MM-DD" />
+                    </div>
+                    <div class="field" data-field="issue_date">
+                      <label>Issue date</label>
+                      <input type="text" data-bind="issue_date" placeholder="YYYY-MM-DD" />
+                    </div>
+                    <div class="field invoice-only" data-field="due_date">
+                      <label>Due date</label>
+                      <input type="text" data-bind="due_date" placeholder="YYYY-MM-DD" />
+                    </div>
+                    <div class="field" data-field="currency">
+                      <label>Currency</label>
+                      <input type="text" data-bind="currency" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Amounts -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="calculator" class="h-4 w-4 text-uniqa-blue"></i>
+                    Amounts
+                  </h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="field" data-field="subtotal">
+                      <label>Subtotal</label>
+                      <input type="number" step="0.01" data-bind="subtotal" />
+                    </div>
+                    <div class="field" data-field="tax_rate">
+                      <label>VAT rate (%)</label>
+                      <input type="number" step="0.01" data-bind="tax_rate" />
+                    </div>
+                    <div class="field" data-field="tax_amount">
+                      <label>VAT amount</label>
+                      <input type="number" step="0.01" data-bind="tax_amount" />
+                    </div>
+                    <div class="field" data-field="total">
+                      <label>Total</label>
+                      <input type="number" step="0.01" data-bind="total" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Counterparty -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="user" class="h-4 w-4 text-uniqa-blue"></i>
+                    Counterparty
+                  </h3>
+                  <div class="space-y-4">
+                    <div class="field" data-field="issued_to.name">
+                      <label>Name</label>
+                      <input type="text" data-bind="issued_to.name" />
+                    </div>
+                    <div class="field invoice-only" data-field="issued_to.company">
+                      <label>Company</label>
+                      <input type="text" data-bind="issued_to.company" />
+                    </div>
+                    <div class="field" data-field="issued_to.address">
+                      <label>Address</label>
+                      <input type="text" data-bind="issued_to.address" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Payment -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="landmark" class="h-4 w-4 text-uniqa-blue"></i>
+                    Payment details
+                  </h3>
+                  <div class="space-y-4">
+                    <div class="field" data-field="pay_to.bank">
+                      <label>Bank</label>
+                      <input type="text" data-bind="pay_to.bank" />
+                    </div>
+                    <div class="field" data-field="pay_to.account_name">
+                      <label>Account holder</label>
+                      <input type="text" data-bind="pay_to.account_name" />
+                    </div>
+                    <div class="field" data-field="pay_to.account_number">
+                      <label>Account / IBAN</label>
+                      <input type="text" data-bind="pay_to.account_number" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Line items -->
+                <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                  <h3 class="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="list" class="h-4 w-4 text-uniqa-blue"></i>
+                    Line items
+                    <span id="line-count" class="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs normal-case tracking-normal text-slate-600"></span>
+                  </h3>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="border-b border-slate-200 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                          <th class="pb-2 pr-4">Description</th>
+                          <th class="pb-2 pr-4">Qty</th>
+                          <th class="pb-2 pr-4">Unit price</th>
+                          <th class="pb-2">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody id="line-items-body" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- JSON view -->
+              <div id="tab-json" class="tab-panel hidden">
+                <pre id="json-view" class="overflow-x-auto rounded-2xl border border-slate-200 bg-uniqa-navy-dark p-5 font-mono text-xs leading-relaxed text-slate-100"></pre>
+              </div>
+
+              <!-- Raw text view -->
+              <div id="tab-raw" class="tab-panel hidden">
+                <pre id="raw-view" class="whitespace-pre-wrap rounded-2xl border border-slate-200 bg-white p-5 font-mono text-xs leading-relaxed text-slate-700"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="mt-12 space-y-2 border-t border-slate-200 pt-6 text-center text-xs text-slate-400">
+          <p>Decision support tool · all extractions must be reviewed by a human adjuster before being saved to the claims system</p>
+          <p class="text-slate-300">
+            Concept demo · not affiliated with or endorsed by UNIQA Insurance Group · branding used illustratively for portfolio purposes
+          </p>
+        </footer>
+      </main>
+    </div>
+
+    <!-- PDF.js for source-document preview -->
+    <script type="module">
+      import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs';
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs';
+      window.pdfjsLib = pdfjsLib;
+      window.dispatchEvent(new Event('pdfjs-ready'));
+    </script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
