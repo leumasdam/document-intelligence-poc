@@ -1,3 +1,5 @@
+![Document Intelligence — AI-assisted tools for the insurance claims back-office](docs/banner.png)
+
 # Document Intelligence for Insurance Claims
 
 > AI-assisted back-office tools for insurance claims workflows.
