@@ -81,6 +81,10 @@
               <i data-lucide="inbox" class="h-4 w-4"></i>
               Classify
             </a>
+            <a href="#summarize" data-mode="summarize" class="mode-nav-link flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition">
+              <i data-lucide="text-quote" class="h-4 w-4"></i>
+              Summarize
+            </a>
           </nav>
           <div class="flex items-center gap-3">
             <!-- Time saved counter -->
@@ -587,6 +591,125 @@
           </div>
         </div>
         <!-- /MODE: CLASSIFY -->
+
+        <!-- ================================================================ -->
+        <!-- MODE: SUMMARIZE (long text → summary + response draft)             -->
+        <!-- ================================================================ -->
+        <div class="mode-summarize-only">
+          <section class="mb-6">
+            <h2 class="text-lg font-semibold tracking-tight text-slate-900">Document summarization &amp; response drafting</h2>
+            <p class="text-sm text-slate-500">Paste a long claim narrative or email thread. AI returns an executive summary, key facts, a suggested action, and a draft reply for the adjuster to review.</p>
+          </section>
+
+          <div class="grid gap-6 lg:grid-cols-12">
+            <!-- Input pane -->
+            <div class="lg:col-span-6">
+              <div class="rounded-2xl border border-slate-200 bg-white p-5">
+                <div class="mb-3 flex items-center justify-between">
+                  <h3 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-uniqa-navy">
+                    <i data-lucide="file-text" class="h-4 w-4 text-uniqa-blue"></i>
+                    Long-form input
+                  </h3>
+                  <span id="sum-char-count" class="text-[11px] text-slate-400">0 chars</span>
+                </div>
+                <textarea
+                  id="sum-input"
+                  rows="18"
+                  placeholder="Paste a multi-paragraph claim narrative, incident report, or back-and-forth email thread here..."
+                  class="w-full resize-y rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-900 focus:border-uniqa-blue focus:outline-none focus:ring-2 focus:ring-uniqa-blue/20"
+                ></textarea>
+
+                <div class="mt-4">
+                  <p class="mb-2 text-[11px] uppercase tracking-wider text-slate-500">Or load a sample narrative</p>
+                  <div class="flex flex-wrap gap-2">
+                    <button type="button" data-narrative="property" class="narrative-btn inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                      <i data-lucide="home" class="h-3.5 w-3.5"></i>
+                      Property damage narrative
+                    </button>
+                    <button type="button" data-narrative="dispute" class="narrative-btn inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                      <i data-lucide="messages-square" class="h-3.5 w-3.5"></i>
+                      Disputed claim thread
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                  <button id="sum-clear" class="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                    Clear
+                  </button>
+                  <button id="sum-btn" class="inline-flex items-center gap-2 rounded-md bg-uniqa-navy px-4 py-1.5 text-sm font-medium text-white transition hover:bg-uniqa-navy-dark disabled:opacity-50">
+                    <i data-lucide="sparkles" class="h-4 w-4"></i>
+                    Summarize
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Result pane -->
+            <aside class="lg:col-span-6 space-y-4">
+              <div id="sum-empty" class="rounded-2xl border-2 border-dashed border-slate-200 bg-white py-12 text-center">
+                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-uniqa-blue-50 text-uniqa-blue">
+                  <i data-lucide="arrow-left" class="h-5 w-5"></i>
+                </div>
+                <p class="text-sm font-medium text-slate-700">Awaiting input</p>
+                <p class="mt-1 px-6 text-xs text-slate-500">Paste a narrative or click a sample, then "Summarize".</p>
+              </div>
+
+              <div id="sum-loading" class="hidden rounded-2xl border border-slate-200 bg-white py-10 text-center">
+                <div class="loader mx-auto"></div>
+                <p class="mt-4 text-sm font-medium text-slate-700">Summarizing…</p>
+              </div>
+
+              <div id="sum-error" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                <p class="text-sm font-semibold text-red-800">Summarization failed</p>
+                <p id="sum-error-message" class="mt-1 text-xs text-red-700"></p>
+              </div>
+
+              <div id="sum-result" class="hidden space-y-4">
+                <!-- Summary card -->
+                <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                  <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+                    <i data-lucide="clipboard-list" class="h-4 w-4 text-uniqa-blue"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-uniqa-navy">Executive summary</span>
+                    <span id="sum-sentiment" class="ml-auto rounded-md px-2 py-0.5 text-xs font-semibold">—</span>
+                    <span id="sum-mode" class="text-[10px] uppercase tracking-wider text-slate-400">—</span>
+                  </div>
+                  <div class="p-5">
+                    <p id="sum-summary" class="text-sm leading-relaxed text-slate-700">—</p>
+                  </div>
+                  <div class="border-t border-slate-100 p-5">
+                    <p class="mb-2 text-[11px] uppercase tracking-wider text-slate-500">Key facts</p>
+                    <ul id="sum-facts" class="space-y-2 text-sm text-slate-700"></ul>
+                  </div>
+                  <div class="border-t border-slate-100 bg-amber-50 p-5">
+                    <p class="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-amber-700">
+                      <i data-lucide="flag" class="h-3.5 w-3.5"></i>
+                      Suggested next action
+                    </p>
+                    <p id="sum-action" class="text-sm font-medium leading-relaxed text-amber-900">—</p>
+                  </div>
+                </div>
+
+                <!-- Customer response draft card -->
+                <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                  <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-3">
+                    <i data-lucide="reply" class="h-4 w-4 text-uniqa-blue"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-uniqa-navy">Customer response draft</span>
+                    <button id="sum-copy-draft" class="ml-auto inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-50">
+                      <i data-lucide="clipboard" class="h-3.5 w-3.5"></i>
+                      <span>Copy</span>
+                    </button>
+                  </div>
+                  <div class="p-5">
+                    <pre id="sum-draft" class="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-relaxed text-slate-700 font-sans"></pre>
+                    <p class="mt-2 text-[11px] text-slate-400">Draft only — the adjuster reviews and edits before sending.</p>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+        <!-- /MODE: SUMMARIZE -->
 
         <footer class="mt-12 space-y-2 border-t border-slate-200 pt-6 text-center text-xs text-slate-400">
           <p>Decision support tool · all extractions must be reviewed by a human adjuster before being saved to the claims system</p>

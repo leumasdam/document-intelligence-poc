@@ -8,14 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from .classifier import classify
 from .extractor import extract_invoice
 from .integration import deliver
-from .samples import SAMPLE_CASES
+from .samples import SAMPLE_CASES, SAMPLE_NARRATIVES
 from .schemas import (
     ClassificationRequest,
     ClassificationResponse,
     ExtractionResponse,
     IntegrationRequest,
     IntegrationResult,
+    SummaryRequest,
+    SummaryResponse,
 )
+from .summarizer import summarize
 
 load_dotenv()
 
@@ -59,6 +62,29 @@ async def classify_case(payload: ClassificationRequest):
         raise HTTPException(status_code=413, detail="Message too long (max 20,000 chars).")
     classification, mode, model = classify(text)
     return ClassificationResponse(classification=classification, mode=mode, model=model)
+
+
+@app.get("/sample-narrative")
+async def list_sample_narratives():
+    return {kind: {"title": data["title"]} for kind, data in SAMPLE_NARRATIVES.items()}
+
+
+@app.get("/sample-narrative/{kind}")
+async def get_sample_narrative(kind: str):
+    if kind not in SAMPLE_NARRATIVES:
+        raise HTTPException(status_code=404, detail=f"Sample narrative '{kind}' not found.")
+    return SAMPLE_NARRATIVES[kind]
+
+
+@app.post("/summarize", response_model=SummaryResponse)
+async def summarize_document(payload: SummaryRequest):
+    text = (payload.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Message text is required.")
+    if len(text) > 30000:
+        raise HTTPException(status_code=413, detail="Message too long (max 30,000 chars).")
+    summary, mode, model = summarize(text)
+    return SummaryResponse(summary=summary, mode=mode, model=model)
 
 
 @app.post("/integrate", response_model=IntegrationResult)

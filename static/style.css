@@ -59,8 +59,12 @@ body[data-doc-type="invoice"] .claim-only { display: none; }
 body[data-doc-type="claim_form"] .invoice-only { display: none; }
 
 /* Mode switching: header nav toggles which top-level section is visible */
-body.mode-extract .mode-classify-only { display: none; }
-body.mode-classify .mode-extract-only { display: none; }
+.mode-extract-only,
+.mode-classify-only,
+.mode-summarize-only { display: none; }
+body.mode-extract .mode-extract-only { display: block; }
+body.mode-classify .mode-classify-only { display: block; }
+body.mode-summarize .mode-summarize-only { display: block; }
 
 .mode-nav-link.active {
   background: var(--uniqa-navy);

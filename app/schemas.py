@@ -85,8 +85,27 @@ class ClassificationRequest(BaseModel):
     text: str
 
 
+class Summary(BaseModel):
+    executive_summary: str
+    key_facts: list[str] = []
+    suggested_action: str
+    customer_response_draft: str
+    sentiment: Literal["satisfied", "neutral", "frustrated", "angry"]
+    detected_language: Optional[str] = None
+
+
+class SummaryResponse(BaseModel):
+    summary: Summary
+    mode: str
+    model: Optional[str] = None
+
+
+class SummaryRequest(BaseModel):
+    text: str
+
+
 class IntegrationRequest(BaseModel):
-    kind: Literal["extraction", "classification"]
+    kind: Literal["extraction", "classification", "summary"]
     payload: dict
 
 

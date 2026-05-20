@@ -61,6 +61,7 @@ const NUM_FIELDS = new Set(['subtotal', 'tax_rate', 'tax_amount', 'total', 'quan
 const SAVINGS_KEY = 'uniqa_doc_intel_savings_seconds';
 const SECONDS_PER_DOC = 8 * 60; // ~8 minutes saved per processed document
 const SECONDS_PER_CLASSIFICATION = 3 * 60; // ~3 minutes saved per case routed
+const SECONDS_PER_SUMMARY = 10 * 60; // ~10 minutes saved per long narrative summarized
 
 let state = {
   invoice: null,
@@ -711,11 +712,12 @@ document.querySelectorAll('.tab-btn').forEach((btn) => {
 });
 
 // ============================================================
-// Mode switching (Extract <-> Classify)
+// Mode switching (Extract / Classify / Summarize)
 // ============================================================
+const VALID_MODES = ['extract', 'classify', 'summarize'];
 function setMode(mode) {
-  const valid = mode === 'classify' ? 'classify' : 'extract';
-  document.body.classList.remove('mode-extract', 'mode-classify');
+  const valid = VALID_MODES.includes(mode) ? mode : 'extract';
+  document.body.classList.remove('mode-extract', 'mode-classify', 'mode-summarize');
   document.body.classList.add(`mode-${valid}`);
   document.querySelectorAll('.mode-nav-link').forEach((link) => {
     link.classList.toggle('active', link.dataset.mode === valid);
@@ -894,9 +896,138 @@ classifyEls.routedReset.addEventListener('click', () => {
   showClassifyPane('empty');
 });
 
+// ============================================================
+// Summarize mode
+// ============================================================
+const sumEls = {
+  input: document.getElementById('sum-input'),
+  charCount: document.getElementById('sum-char-count'),
+  summarizeBtn: document.getElementById('sum-btn'),
+  clearBtn: document.getElementById('sum-clear'),
+  empty: document.getElementById('sum-empty'),
+  loading: document.getElementById('sum-loading'),
+  error: document.getElementById('sum-error'),
+  errorMessage: document.getElementById('sum-error-message'),
+  result: document.getElementById('sum-result'),
+  summary: document.getElementById('sum-summary'),
+  sentiment: document.getElementById('sum-sentiment'),
+  mode: document.getElementById('sum-mode'),
+  facts: document.getElementById('sum-facts'),
+  action: document.getElementById('sum-action'),
+  draft: document.getElementById('sum-draft'),
+  copyDraftBtn: document.getElementById('sum-copy-draft'),
+};
+
+const SENTIMENT_STYLE = {
+  satisfied: { label: '😊 Satisfied', cls: 'bg-emerald-100 text-emerald-800' },
+  neutral: { label: '😐 Neutral', cls: 'bg-slate-100 text-slate-700' },
+  frustrated: { label: '😟 Frustrated', cls: 'bg-amber-100 text-amber-800' },
+  angry: { label: '😠 Angry', cls: 'bg-red-100 text-red-800' },
+};
+
+function showSumPane(name) {
+  ['empty', 'loading', 'error', 'result'].forEach((p) => {
+    sumEls[p].classList.toggle('hidden', p !== name);
+  });
+}
+
+function updateSumCharCount() {
+  const n = (sumEls.input.value || '').length;
+  sumEls.charCount.textContent = `${n.toLocaleString()} chars`;
+}
+
+sumEls.input.addEventListener('input', updateSumCharCount);
+
+sumEls.clearBtn.addEventListener('click', () => {
+  sumEls.input.value = '';
+  updateSumCharCount();
+  showSumPane('empty');
+  sumEls.input.focus();
+});
+
+document.querySelectorAll('.narrative-btn').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const kind = btn.dataset.narrative;
+    try {
+      const resp = await fetch(`/sample-narrative/${kind}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      sumEls.input.value = data.body;
+      updateSumCharCount();
+      sumEls.input.focus();
+      sumEls.input.scrollTop = 0;
+    } catch (err) {
+      sumEls.errorMessage.textContent = `Could not load sample: ${err.message}`;
+      showSumPane('error');
+    }
+  });
+});
+
+sumEls.summarizeBtn.addEventListener('click', async () => {
+  const text = (sumEls.input.value || '').trim();
+  if (!text) {
+    sumEls.input.focus();
+    return;
+  }
+  showSumPane('loading');
+  try {
+    const resp = await fetch('/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const payload = await resp.json();
+    renderSummary(payload);
+    bumpSavings(SECONDS_PER_SUMMARY);
+  } catch (err) {
+    sumEls.errorMessage.textContent = err.message || String(err);
+    showSumPane('error');
+  }
+});
+
+function renderSummary(payload) {
+  const s = payload.summary;
+  sumEls.summary.textContent = s.executive_summary || '—';
+
+  const sent = SENTIMENT_STYLE[s.sentiment] || SENTIMENT_STYLE.neutral;
+  sumEls.sentiment.textContent = sent.label;
+  sumEls.sentiment.className = `ml-auto rounded-md px-2 py-0.5 text-xs font-semibold ${sent.cls}`;
+
+  sumEls.mode.textContent = payload.mode === 'llm' ? `${payload.model || 'Claude'}` : 'heuristic';
+
+  sumEls.facts.innerHTML = '';
+  for (const fact of s.key_facts || []) {
+    const li = document.createElement('li');
+    li.className = 'flex items-start gap-2';
+    li.innerHTML = `<span class="mt-1 flex h-1.5 w-1.5 flex-shrink-0 rounded-full bg-uniqa-blue"></span><span>${escapeHtml(fact)}</span>`;
+    sumEls.facts.appendChild(li);
+  }
+
+  sumEls.action.textContent = s.suggested_action || '—';
+  sumEls.draft.textContent = s.customer_response_draft || '—';
+
+  showSumPane('result');
+  refreshIcons();
+}
+
+sumEls.copyDraftBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(sumEls.draft.textContent || '');
+    const label = sumEls.copyDraftBtn.querySelector('span');
+    const original = label.textContent;
+    label.textContent = 'Copied!';
+    setTimeout(() => (label.textContent = original), 1500);
+  } catch (err) { console.error(err); }
+});
+
 // Init
 const initialMode = window.location.hash.replace('#', '') || 'extract';
 setMode(initialMode);
 renderSavings(false);
 refreshIcons();
 updateCharCount();
+updateSumCharCount();
