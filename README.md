@@ -8,6 +8,7 @@
 
 ### 🟢 Live demo: **<https://document-intelligence-poc.onrender.com>**
 
+[![CI](https://github.com/leumasdam/document-intelligence-poc/actions/workflows/ci.yml/badge.svg)](https://github.com/leumasdam/document-intelligence-poc/actions/workflows/ci.yml)
 [![Stack](https://img.shields.io/badge/backend-FastAPI-009688)](https://fastapi.tiangolo.com)
 [![Stack](https://img.shields.io/badge/AI-Claude%20Opus%204.7-7c3aed)](https://www.anthropic.com)
 [![Stack](https://img.shields.io/badge/deploy-Render-46e3b7)](https://render.com)
@@ -210,9 +211,29 @@ sample-data/
   claim-form.pdf   Slovak car-insurance claim form (generated)
 scripts/
   generate_claim_sample.py  fpdf2 generator for the claim form
-  smoke_test.py             End-to-end smoke test against /extract
+  generate_banner.py        README banner generator
+  generate_og_image.py      Social-share card generator
+  smoke_test.py             End-to-end smoke test against a running server
+tests/
+  test_extraction.py     Heuristic extraction + sample-PDF assertions
+  test_classification.py Category / priority / routing assertions
+  test_summarization.py  Summary / sentiment / draft assertions
+  test_integration.py    Downstream routing + case-ID format
+.github/workflows/ci.yml  Runs the test suite on every push
 Dockerfile  · render.yaml  · run.ps1
 ```
+
+## Tests
+
+The pure-Python logic (heuristic extraction, classification, summarization,
+routing) is covered by a `pytest` suite that needs no API key:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/ -q
+```
+
+GitHub Actions runs it on every push — see the CI badge at the top.
 
 ---
 
