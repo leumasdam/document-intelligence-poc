@@ -916,7 +916,11 @@ const sumEls = {
   action: document.getElementById('sum-action'),
   draft: document.getElementById('sum-draft'),
   copyDraftBtn: document.getElementById('sum-copy-draft'),
+  attachBtn: document.getElementById('sum-attach'),
+  routedMsg: document.getElementById('sum-routed-msg'),
 };
+
+let lastSummary = null;
 
 const SENTIMENT_STYLE = {
   satisfied: { label: '😊 Satisfied', cls: 'bg-emerald-100 text-emerald-800' },
@@ -991,6 +995,9 @@ sumEls.summarizeBtn.addEventListener('click', async () => {
 
 function renderSummary(payload) {
   const s = payload.summary;
+  lastSummary = s;
+  sumEls.routedMsg.textContent = '';
+  sumEls.attachBtn.disabled = false;
   sumEls.summary.textContent = s.executive_summary || '—';
 
   const sent = SENTIMENT_STYLE[s.sentiment] || SENTIMENT_STYLE.neutral;
@@ -1022,6 +1029,29 @@ sumEls.copyDraftBtn.addEventListener('click', async () => {
     label.textContent = 'Copied!';
     setTimeout(() => (label.textContent = original), 1500);
   } catch (err) { console.error(err); }
+});
+
+sumEls.attachBtn.addEventListener('click', async () => {
+  if (!lastSummary) return;
+  sumEls.attachBtn.disabled = true;
+  const original = sumEls.attachBtn.innerHTML;
+  sumEls.attachBtn.innerHTML = '<i data-lucide="loader-2" class="h-3.5 w-3.5 animate-spin"></i> Attaching…';
+  refreshIcons();
+  try {
+    const result = await callIntegrate('summary', lastSummary);
+    const webhookNote = result.webhook_status === 'delivered'
+      ? ` · live webhook ✓ (HTTP ${result.webhook_http_status})`
+      : '';
+    sumEls.routedMsg.textContent = `✓ Attached to ${result.case_id} · audit logged${webhookNote}`;
+    sumEls.attachBtn.innerHTML = '<i data-lucide="check" class="h-3.5 w-3.5"></i> Attached';
+    refreshIcons();
+  } catch (err) {
+    sumEls.routedMsg.textContent = '';
+    alert(`Attach failed: ${err.message}`);
+    sumEls.attachBtn.innerHTML = original;
+    sumEls.attachBtn.disabled = false;
+    refreshIcons();
+  }
 });
 
 // Init

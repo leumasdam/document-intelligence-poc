@@ -45,6 +45,11 @@ def _generate_case_id(prefix: str) -> str:
 def _route_email(payload: dict, kind: str) -> str:
     if kind == "classification":
         return EMAIL_ROUTING.get(payload.get("category", "other"), "triage@uniqa.sk")
+    if kind == "summary":
+        # Dissatisfied customers go to the complaints desk; the rest to claims.
+        if payload.get("sentiment") in ("angry", "frustrated"):
+            return "complaints@uniqa.sk"
+        return "claims-team@uniqa.sk"
     # extraction
     doc_type = payload.get("document_type", "invoice")
     if doc_type == "claim_form":

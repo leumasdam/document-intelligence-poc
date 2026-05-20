@@ -25,12 +25,13 @@ team, that's **~75 hours of manual data entry daily** — done by qualified
 domain experts who could instead be reviewing complex claims, talking to
 customers, or training junior staff.
 
-This demo shows two AI-assisted tools that move that bottleneck:
+This demo shows three AI-assisted tools that move that bottleneck:
 
 | Tool | Input | Output | Time saved per case |
 |---|---|---|---|
 | **Extract** | PDF claim form / invoice | Structured JSON, fields verified against PDF | ~8 minutes |
 | **Classify** | Incoming email / message | Category + priority + routing team + actions | ~3 minutes |
+| **Summarize** | Long narrative / email thread | Executive summary + key facts + action + reply draft | ~10 minutes |
 
 The adjuster stays in the loop on every case: the AI proposes, the adjuster
 confirms (or corrects) before the result is pushed downstream. Missing or
@@ -56,7 +57,11 @@ Open the [live demo](https://document-intelligence-poc.onrender.com) and try:
 5. **Click Approve & route** — a success card shows the case ID, the team
    mailbox, the audit log, and (if a webhook is configured) confirmation that
    the payload was actually delivered to a downstream system.
-6. **Watch the *Time saved* counter** in the header grow with each action.
+6. **Switch to Summarize mode** and click **Disputed claim thread** — a
+   multi-message email argument loads. Click **Summarize** to get a 2-3
+   sentence executive summary, the key facts, a detected sentiment
+   (😠 angry), a suggested action, and a ready-to-edit customer reply.
+7. **Watch the *Time saved* counter** in the header grow with each action.
 
 ---
 
@@ -64,14 +69,15 @@ Open the [live demo](https://document-intelligence-poc.onrender.com) and try:
 
 ```mermaid
 flowchart LR
-    A["📄 PDF upload<br/>or 📧 text paste"] --> B["pdfplumber<br/>(text + word bboxes)"]
-    A2["📧 raw text"] --> C
+    A["📄 PDF (Extract)"] --> B["pdfplumber<br/>text + word bboxes"]
+    A2["📧 text (Classify)"] --> C
+    A3["📝 long text (Summarize)"] --> C
     B --> C{"ANTHROPIC_API_KEY<br/>configured?"}
     C -- "yes" --> D["Claude Opus 4.7<br/>structured outputs"]
     C -- "no" --> E["Regex / keyword<br/>heuristic fallback"]
     D --> F["Pydantic validation"]
     E --> F
-    F --> G["Review UI<br/>(form + PDF preview)"]
+    F --> G["Review UI<br/>(form / cards / preview)"]
     G -- "approve" --> H["POST /integrate"]
     H --> I{"INTEGRATION_<br/>WEBHOOK_URL<br/>set?"}
     I -- "yes" --> J["📡 Live POST<br/>to webhook"]
@@ -113,9 +119,10 @@ when an API key is added.
 3. **Graceful degradation** — every AI call has a deterministic regex fallback.
    The product works without external dependencies and the UI is honest about
    which mode is active.
-4. **Two tools, one workspace** — header nav switches between Extract and
-   Classify via URL hash (`#extract` / `#classify`). Same backend, same
-   styling, shared time-saved counter.
+4. **Three tools, one workspace** — header nav switches between Extract,
+   Classify, and Summarize via URL hash (`#extract` / `#classify` /
+   `#summarize`). Same backend, same styling, shared time-saved counter,
+   shared `/integrate` downstream path.
 5. **Real vs mock integration toggle** — toggling `INTEGRATION_WEBHOOK_URL`
    moves the same Approve flow from mock to live POST without code change.
    Lets you demo the same UI as either "works without setup" or
@@ -187,12 +194,14 @@ app/
   pdf_reader.py  pdfplumber wrapper, text + per-word bounding boxes
   llm.py         Claude client, JSON schema, heuristic fallback
   classifier.py  Classify orchestration (text → LLM or heuristic)
+  summarizer.py  Summarize orchestration (text → LLM or extractive heuristic)
   integration.py Mock + real downstream integration (webhook POST)
-  samples.py     Built-in sample customer messages
+  samples.py     Built-in sample messages + claim narratives
   schemas.py     Pydantic models
 static/
-  index.html     UI shell with mode nav (Extract / Classify)
+  index.html     UI shell with mode nav (Extract / Classify / Summarize)
   app.js         Frontend logic + PDF.js + click-to-highlight
+  favicon.svg    Document-mark favicon
   style.css      Custom styling
 sample-data/
   invoice.pdf      Generic invoice

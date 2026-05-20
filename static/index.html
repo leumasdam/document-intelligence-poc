@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UNIQA · Document Intelligence (concept)</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -703,6 +704,13 @@
                   <div class="p-5">
                     <pre id="sum-draft" class="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-relaxed text-slate-700 font-sans"></pre>
                     <p class="mt-2 text-[11px] text-slate-400">Draft only — the adjuster reviews and edits before sending.</p>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 border-t border-slate-100 bg-slate-50 p-4">
+                    <span id="sum-routed-msg" class="text-xs text-emerald-700"></span>
+                    <button id="sum-attach" class="inline-flex items-center gap-1.5 rounded-md bg-uniqa-navy px-4 py-1.5 text-xs font-medium text-white transition hover:bg-uniqa-navy-dark disabled:opacity-50">
+                      <i data-lucide="paperclip" class="h-3.5 w-3.5"></i>
+                      Attach to case file
+                    </button>
                   </div>
                 </div>
               </div>
