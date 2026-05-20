@@ -58,7 +58,7 @@
 
       <!-- Main header -->
       <header class="border-b border-slate-200/80 bg-white">
-        <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-y-3 px-6 py-4">
           <div class="flex items-center gap-4">
             <div class="flex items-center">
               <div class="flex h-10 w-10 items-center justify-center rounded-md bg-uniqa-navy text-white">
@@ -68,12 +68,12 @@
             </div>
             <div class="ml-3 border-l border-slate-200 pl-4">
               <h1 class="text-base font-semibold tracking-tight text-slate-900">Document Intelligence</h1>
-              <p class="text-xs text-slate-500">AI tools for the claims workflow</p>
+              <p class="hidden sm:block text-xs text-slate-500">AI tools for the claims workflow</p>
             </div>
           </div>
 
-          <!-- Mode nav (Extract / Classify) -->
-          <nav class="hidden md:flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+          <!-- Mode nav (Extract / Classify / Summarize) -->
+          <nav class="order-3 flex w-full items-center justify-center gap-1 rounded-lg bg-slate-100 p-1 md:order-none md:w-auto">
             <a href="#extract" data-mode="extract" class="mode-nav-link flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition">
               <i data-lucide="file-text" class="h-4 w-4"></i>
               Extract
