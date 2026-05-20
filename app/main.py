@@ -29,7 +29,23 @@ SAMPLES = {
     "claim": ROOT / "sample-data" / "claim-form.pdf",
 }
 
-app = FastAPI(title="PDF Data Extraction Assistant", version="0.2.0")
+app = FastAPI(title="PDF Data Extraction Assistant", version="0.3.0")
+
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Force browsers to revalidate the HTML/JS/CSS on every load.
+
+    `no-cache` keeps the asset cached but requires a conditional request
+    before reuse — the server answers 304 when unchanged. This prevents the
+    stale-JavaScript problem where a returning visitor runs an old app.js
+    against a freshly deployed index.html.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path == "/" or path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/sample")
